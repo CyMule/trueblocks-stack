@@ -1,0 +1,43 @@
+version: "3.0"
+
+services:
+    beacon_node:
+      image: sigp/lighthouse:${LIGHTHOUSE_VERSION}
+      volumes:
+        - ./lighthouse-data:/root/.lighthouse
+        - ./scripts:/root/scripts:ro
+      ports:
+        - 5052:5052/tcp
+        - 5053:5053/tcp
+        - 5054:5054/tcp     # metrics endpoint
+        - 9000:9000/tcp
+        - 9000:9000/udp
+      env_file: .env
+      command: sh /root/scripts/start-beacon-node.sh
+      restart: on-failure
+      stop_grace_period: 3m
+      configs:
+        - jwt.hex
+    erigon:
+      image: thorax/erigon:latest
+      command: erigon --datadir=/erigon-data --externalcl --chain sepolia --http.api=eth,debug,net,trace,web3,erigon --authrpc.jwtsecret=/jwt.hex --authrpc.port=8551 --ws --http.corsdomain="*" --http.addr="0.0.0.0" --http.vhosts='*' --authrpc.addr="erigon" --authrpc.vhosts="erigon"
+      user: 1000:1000 
+      ports:
+        - "8545:8545"
+        - "30303:30303/tcp"
+        - "30303:30303/udp"
+        - "30304:30304"
+        - "42069:42069/tcp"
+        - "42069:42069/udp"
+        - "8551:8551"
+      expose:
+        - 8551
+      volumes:
+        - ./erigon-data:/erigon-data/
+      restart: unless-stopped
+      configs:
+        - jwt.hex
+configs:
+  jwt.hex:
+    file: ./jwt.hex
+
